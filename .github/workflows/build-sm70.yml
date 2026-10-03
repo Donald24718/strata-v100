@@ -44,6 +44,9 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           tail -40 /tmp/build.log
+          # annotations ARE publicly readable; surface the real error there
+          ERR=$(grep -iE "error|Error [0-9]|not found|No such file|CMake Error" /tmp/build.log | tail -12 | tr '\n' '|' | tr '":"' "  " | cut -c1-900)
+          echo "::error::build failed (exit $rc): ${ERR:-no error line matched, see log}"
           exit $rc
 
       - name: sanity check the binary
