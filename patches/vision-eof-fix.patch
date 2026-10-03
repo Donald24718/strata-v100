@@ -1,0 +1,47 @@
+# Vision embedding EOF fix
+# serve/server.py deferred reading each embedding file until after the whole encode loop. The vision cache is an LRU of 64 entries, so a request carrying more images than the cache holds had an earlier file evicted before it was read, and the client saw an EOF mid-request. Each embedding is now read immediately after its own encode.
+# Base: Niko1221/Strata v0.1.30 (MIT, Copyright (c) 2026 Niko1221 and the Strata contributors)
+# Apply from the source root:  patch -p1 < this-file
+
+--- a/serve/server.py
++++ b/serve/server.py
+@@ -903,8 +903,18 @@
+             # run on the GPU at the same time - an encode during a running request left that request stuck at
+             # "reading the prompt" with CPU and GPU busy, for good (reproduced).  So encoding takes its turn in the
+             # same FIFO as the requests.
++            combined = self.vision.dir / f"req-{uuid.uuid4().hex[:12]}.sve"
++            encoded = []
+             with self.fifo:
+-                encoded = [self.vision.encode(src) for src in images]
++                with open(combined, "wb") as f:
++                    # Each embedding file is read out right after its encode: a later encode may evict it from the
++                    # vision cache (LRU, 64 entries), so deferring the read to the end of the loop breaks requests
++                    # that carry more images than the cache holds (2026-10-01: a 65-image request lost a file to
++                    # eviction and the client saw an EOF mid-request).
++                    for src in images:
++                        path, n = self.vision.encode(src)
++                        f.write(path.read_bytes())
++                        encoded.append(n)
+             # one <|image_pad|> per image -> one per image token.  Only the markers the template writes for an image
+             # (right after <|vision_start|>) are images: the same text inside a message (an agent reading these docs,
+             # #150) is kept as plain text, or it took an image's place and the counts no longer matched.
+@@ -912,7 +922,7 @@
+             out, k = [], 0
+             for j, t in enumerate(ids):
+                 if t == pad and j > 0 and ids[j - 1] == start and k < len(encoded):
+-                    out += [pad] * encoded[k][1]
++                    out += [pad] * encoded[k]
+                     k += 1
+                 elif t == pad:
+                     out += literal
+@@ -921,10 +931,6 @@
+             if k != len(encoded):
+                 raise ValueError("the prompt and its images do not match")
+             ids = out
+-            combined = self.vision.dir / f"req-{uuid.uuid4().hex[:12]}.sve"
+-            with open(combined, "wb") as f:
+-                for path, _ in encoded:
+-                    f.write(path.read_bytes())
+             self.embeddings.path = combined
+         room = self.engine.max_context - CTX_SLACK - len(ids)
+         if max_new is None or max_new <= 0 or (self.fit_max_tokens and room < 1):

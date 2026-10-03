@@ -1,0 +1,16 @@
+# MTP fetch via hf-mirror.com
+# One constant: the Hugging Face resolve URL is pointed at the hf-mirror.com mirror, which is what works from networks where huggingface.co is unreachable. Purely optional - drop this patch if huggingface.co works for you.
+# Base: Niko1221/Strata v0.1.30 (MIT, Copyright (c) 2026 Niko1221 and the Strata contributors)
+# Apply from the source root:  patch -p1 < this-file
+
+--- a/tools/mtp_fetch.py
++++ b/tools/mtp_fetch.py
+@@ -19,7 +19,7 @@
+ import time
+ import urllib.request
+ 
+-REPO = "https://huggingface.co/Qwen/Qwen3.8-Flash-Next/resolve/main/"
++REPO = "https://hf-mirror.com/Qwen/Qwen3.8-Flash-Next/resolve/main/"
+ DTYPE_BYTES = {"BF16": 2, "F16": 2, "F32": 4, "F8_E4M3": 1, "I64": 8, "I32": 4}
+ 
+ 

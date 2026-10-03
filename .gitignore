@@ -1,0 +1,13 @@
+build/
+build-*/
+packs/
+mtp-*/
+llama-pin/
+data/
+*.log
+*.gguf
+*.ggml
+*.bin
+.venv/
+__pycache__/
+src-tree*/

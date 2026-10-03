@@ -1,0 +1,31 @@
+# Volta (sm_70) enablement
+# Two guards refuse compute capability below 7.5: the build-time arch check and the runtime device check. Both are lowered to 70. Upstream 0.1.31+ reaches the same result with the official flag -DSTRATA_EXPERIMENTAL_SM60=ON; on 0.1.30 the flag only admits sm_60/61, so the two lines are still needed.
+# Base: Niko1221/Strata v0.1.30 (MIT, Copyright (c) 2026 Niko1221 and the Strata contributors)
+# Apply from the source root:  patch -p1 < this-file
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -83,7 +83,7 @@
+     # these kernels were written for, so two intrinsics are replaced for it - `__dp4a` (6.1+) and
+     # `__nanosleep` (7.0+) - in include/strata/kernels/dp4a.hpp, which is bit-exact for the first and
+     # merely a shorter pause for the second.  RTX 20/30/40/50 cards must use the release engine instead.
+-    if(_base LESS 75 AND NOT STRATA_EXPERIMENTAL_SM60)
++    if(_base LESS 70 AND NOT STRATA_EXPERIMENTAL_SM60)
+       message(FATAL_ERROR
+         "Strata needs an NVIDIA GPU of compute capability 7.5 or newer (RTX 20 / 30 / 40 / 50 series), but "
+         "CMAKE_CUDA_ARCHITECTURES is '${CMAKE_CUDA_ARCHITECTURES}'.  (A Pascal build is "
+--- a/src/core/device.cu
++++ b/src/core/device.cu
+@@ -135,10 +135,10 @@
+     d.arch = base_arch(p.gcnArchName);
+     if (const std::string why = arch_problem(p, ordinal); !why.empty()) throw CudaError(why, -1);
+ #else
+-    if (d.cc_major * 10 + d.cc_minor < 75) {
++    if (d.cc_major * 10 + d.cc_minor < 70) {
+         throw CudaError("device " + d.name + " reports compute capability " + std::to_string(d.cc_major) +
+                             "." + std::to_string(d.cc_minor) +
+-                            "; Strata needs compute capability 7.5 or newer (RTX 20 / 30 / 40 / 50 series)",
++                            "; Strata needs compute capability 7.0 or newer (RTX 20 / 30 / 40 / 50 series, Tesla V100)",
+                         -1);
+     }
+ #endif

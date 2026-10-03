@@ -1,0 +1,16 @@
+strata-v100 — third-party patches, build scripts and measurements for running
+Strata on NVIDIA Volta (compute capability 7.0, e.g. Tesla V100).
+
+This is NOT an official Strata release and is not endorsed by the Strata project.
+
+Base project: Strata, Copyright (c) 2026 Niko1221 and the Strata contributors,
+MIT licensed — https://github.com/Niko1221/Strata
+
+Everything under patches/ is our modification of that source. The upstream
+LICENSE is reproduced in full in LICENSE and applies to the upstream code the
+patches apply against. Our patches, scripts and documents are distributed
+under the same MIT terms.
+
+Upstream position, for honesty: as of engine 0.1.31 the upstream author treats
+sm_70 as "community-tested" and states it "won't be in the ready-made engine".
+Nothing here claims otherwise.
