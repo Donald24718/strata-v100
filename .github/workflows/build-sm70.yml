@@ -29,10 +29,22 @@ jobs:
 
       - name: build for sm_70
         run: |
-          set -euo pipefail
+          set +e
           TAG="${{ inputs.engine_tag }}"
           [ -n "$TAG" ] || TAG="${GITHUB_REF_NAME:-v0.1.30}"
-          NVCC=/usr/local/cuda-12.8/bin/nvcc ARCH=70 ./scripts/build-v100.sh "$TAG"
+          NVCC=/usr/local/cuda-12.8/bin/nvcc ARCH=70 ./scripts/build-v100.sh "$TAG" > /tmp/build.log 2>&1
+          rc=$?
+          # publish the tail of the log where anyone can read it (job summary)
+          {
+            echo "build exit code: $rc"
+            echo "- cmake: $(cmake --version | head -1)"
+            echo "- gcc: $(gcc --version | head -1)"
+            echo '```'
+            tail -100 /tmp/build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          tail -40 /tmp/build.log
+          exit $rc
 
       - name: sanity check the binary
         run: |
