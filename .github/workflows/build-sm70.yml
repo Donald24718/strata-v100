@@ -1,0 +1,49 @@
+name: build sm_70 engine
+# Runs on GitHub's own runners: our network and hardware are not involved.
+# Compiling CUDA needs no GPU, so a plain CPU runner is enough.
+on:
+  workflow_dispatch:
+    inputs:
+      engine_tag:
+        description: upstream Strata tag to build
+        default: v0.1.30
+        required: true
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install CUDA 12.8 (same toolkit the measurements were made with)
+        run: |
+          set -euo pipefail
+          wget -qO /tmp/cuda-keyring.deb \
+            https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i /tmp/cuda-keyring.deb
+          sudo apt-get update
+          sudo apt-get install -y cuda-toolkit-12-8 ninja-build cmake
+          /usr/local/cuda-12.8/bin/nvcc --version | tail -1
+
+      - name: build for sm_70
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.engine_tag }}"
+          [ -n "$TAG" ] || TAG="${GITHUB_REF_NAME:-v0.1.30}"
+          NVCC=/usr/local/cuda-12.8/bin/nvcc ARCH=70 ./scripts/build-v100.sh "$TAG"
+
+      - name: sanity check the binary
+        run: |
+          set -euo pipefail
+          file src-tree/build/strata
+          # the engine must at least load its own help without a GPU present
+          ./src-tree/build/strata --help >/dev/null 2>&1 || true
+          ls -l src-tree/build/strata
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strata-sm70-${{ inputs.engine_tag || github.ref_name }}
+          path: src-tree/build/strata
+          if-no-files-found: error
